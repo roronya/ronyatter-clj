@@ -9,13 +9,14 @@
 (def accessTokenSecret "jECQWJ0Palrnxd9egf27ywSPgiagE46xMIH9MR9up7xlP")
 
 (defn make-configurationBuilder []
-  (let [configurationBuilder (new ConfigurationBuilder)]
-    (-> configurationBuilder (.setDebugEnabled true))
-    (-> configurationBuilder (.setOAuthConsumerKey consumerKey))
-    (-> configurationBuilder (.setOAuthConsumerSecret consumerSecret))
-    (-> configurationBuilder (.setOAuthAccessToken accessToken))
-    (-> configurationBuilder (.setOAuthAccessTokenSecret accessTokenSecret))
-    (-> configurationBuilder (.build))))
+  (-> (doto (new ConfigurationBuilder)
+    (.setDebugEnabled true)
+    (.setOAuthConsumerKey consumerKey)
+    (.setOAuthConsumerSecret consumerSecret)
+    (.setOAuthAccessToken accessToken)
+    (.setOAuthAccessTokenSecret accessTokenSecret))
+    (.build)))
+
 
 (defn make-twitter []
   (-> (new TwitterFactory (make-configurationBuilder)) (.getInstance)))
