@@ -1,5 +1,5 @@
 (ns ronyatter-clj.twitter
-  (:require [clojure.string :as string])
+  (:use [clojure.string :only [join]])
   (:import [twitter4j TwitterFactory TwitterStreamFactory StatusListener StatusAdapter UserStreamListener])
   (:import [twitter4j.conf ConfigurationBuilder])
   (:import [java.util Deque LinkedList Collections])
@@ -10,99 +10,81 @@
 (def accessToken "107718872-9Jiv5HhdrOeh3NtAP3Dt1vMVErKe5MWTmVaXRlmZ")
 (def accessTokenSecret "jECQWJ0Palrnxd9egf27ywSPgiagE46xMIH9MR9up7xlP")
 
-(defn make-configurationBuilder []
-  (-> (doto (new ConfigurationBuilder)
-    (.setDebugEnabled true)
-    (.setOAuthConsumerKey consumerKey)
-    (.setOAuthConsumerSecret consumerSecret)
-    (.setOAuthAccessToken accessToken)
-    (.setOAuthAccessTokenSecret accessTokenSecret))
-    (.build)))
+(defn make-ConfigurationBuilder []
+  (-> (new ConfigurationBuilder)
+      (.setDebugEnabled true)
+      (.setOAuthConsumerKey consumerKey)
+      (.setOAuthConsumerSecret consumerSecret)
+      (.setOAuthAccessToken accessToken)
+      (.setOAuthAccessTokenSecret accessTokenSecret)
+      (.build)))
 
-(defn make-twitter []
-  (-> (new TwitterFactory (make-configurationBuilder)) (.getInstance)))
+(defn make-Twitter []
+  (.. (new TwitterFactory (make-ConfigurationBuilder)) getInstance))
 
-(defn make-twitterStream []
-  (-> (new TwitterStreamFactory (make-configurationBuilder)) (.getInstance)))
+(defn make-TwitterStream []
+  (.. (new TwitterStreamFactory (make-ConfigurationBuilder)) getInstance))
 
-(defn status2tweetmap [status]
-  "API叩くとjsonで帰ってくるのでclojureのmapに変換"
-  {:name (-> (-> status (.getUser)) (.getName))
-   :screenname (str "@" (-> (-> status (.getUser)) (.getScreenName)))
-   :text (-> status (.getText))
-   :createdat (str (-> status (.getCreatedAt)))})
+(def testcase "おねっちゃんおねっちゃんおねっちゃんおねっちゃんおねっちゃんおねっちゃんおねっちゃんおねっちゃんおねっちゃんおねっちゃんおねっちゃんおねっちゃんおねっちゃんおねっちゃんおねっちゃんおねっちゃんおねっちゃんおねっちゃんおねっちゃんおねっちゃんおねっちゃんおねっちゃんおねっちゃんおね")
 
-(defn print-tweet [tweetmap]
+(defn splitstr-at [n str]
+  (map #(join %1)(split-at n str)))
+
+(defn split-each [n str]
+  (let [returnval (ref [])]
+    (loop [result (splitstr-at n str)]
+        (dosync (ref-set returnval (conj @returnval (first result))))
+        (when-not (= "" (second result))
+          (recur (splitstr-at n (second result)))))
+    @returnval))
+
+(defn print-Tweet [Tweet]
   "1つのtweetを綺麗に整形して出力"
-    (println (:name tweetmap))
-    (println (:screenname tweetmap))
-    (println (:text tweetmap))
-    (println (:createdat tweetmap)))
+  (println-screen (str (:name Tweet) ":" (:screenname Tweet)))
+  (printcol-screen (split-each 40 (:text Tweet)))
+  (println-screen (:createdat Tweet)))
 
-(defn get-timeline []
-  "APIを叩いて最新20件のtweetをjsonで取得し、clojureのmapのベクタに変換したものを返す"
-  (map #(status2tweetmap %1) (-> (make-twitter) (.getHomeTimeline))))
-
-(defn print-timeline []
-  "debug用の関数"
-  (doseq [tweetmap (get-timeline)]
-    (print-tweet tweetmap)))
+(defn rawdata->Tweet [status]
+  "API叩くとjsonで帰ってくるのでclojureのmapに変換
+   Tweetの形式は以下のようなmap
+   {:nama  ろにゃ
+    :screennama @roronya
+    :text 今 日 の ミ クちゃんも最高にかわいかった
+    :createdat 20130408}"
+  {:name (.. status getUser getName)
+   :screenname (str "@" (.. status getUser  getScreenName))
+   :text (.. status getText)
+   :createdat (str (.. status getCreatedAt))})
 
 ;;タイムラインをキャッシュしておくキュー
-(def timeline-cache (ref clojure.lang.PersistentQueue/EMPTY))
+(def TimelineCache (ref clojure.lang.PersistentQueue/EMPTY))
 
-(defn make-timeline-cache []
+(defn get-Timeline []
+  "APIを叩いて最新20件のtweetをjsonで取得し、
+   clojureのmapのベクタに変換したものを返す"
+  (map #(rawdata->Tweet %1) (.. (make-Twitter) getHomeTimeline)))
+
+(defn make-TimelineCache []
   "出力する最新20件のtweetを作る"
-  (doseq [tweetmapvec (reverse (get-timeline))]
-    (dosync (ref-set timeline-cache (conj @timeline-cache tweetmapvec)))))
+  (doseq [Tweetvec (reverse (get-Timeline))]
+    (dosync (ref-set TimelineCache (conj @TimelineCache Tweetvec)))))
 
-(defn print-timeline-cache []
-  "タイムラインキャッシュを出力"
-  (doseq [tweetmap (reverse @timeline-cache)]
-    (print-tweet tweetmap)))
-
-(defn print-screen-tweet [tweetmap]
-  "1つのtweetを綺麗に整形して出力"
-  (println-screen (:name tweetmap))
-  (println-screen (:screenname tweetmap))
-  (println-screen (:text tweetmap))
-  (println-screen (:createdat tweetmap)))
-
-(defn print-screen-timeline-cache []
+(defn print-TimelineCache []
   "タイムラインキャッシュを出力"
   (clear-screen)
-  (doseq [tweetmap (reverse @timeline-cache)]
-    (print-screen-tweet tweetmap)))
+  (doseq [Tweet (reverse @TimelineCache)]
+    (print-Tweet Tweet)))
 
-(defn update-timeline-cache [tweetmap]
-  (dosync (ref-set timeline-cache (pop @timeline-cache)))
-  (dosync (ref-set timeline-cache (conj @timeline-cache tweetmap))))
-
-;;キューのテスト -> 後ろから入って頭から出る
-;(def test (ref (conj clojure.lang.PersistentQueue/EMPTY 10 20 30 40)))
-;(dosync (ref-set test (conj @test 1)))
-;(dosync (ref-set test (pop @test)))
-;(dosync (ref-set test (reverse @test)))
-;(doseq [x @test] (println x))
-
-;(make-timeline-cache)
-;(println (reverse @timeline-cache))
-;(print-timeline-cache)
-;(pop @timeline-cache)
-;(conj 
-;(make-timeline-cache)
-;(start-screen)
-;(stop-screen)
-;(printcol-screen @timeline-cache)
-;(clear-screen)
-;(print-screen-tweet (first @timeline-cache))
+(defn update-TimelineCache [Tweet]
+  (dosync (ref-set TimelineCache (pop @TimelineCache)))
+  (dosync (ref-set TimelineCache (conj @TimelineCache Tweet))))
 
 (def listener
   (reify 
     UserStreamListener
     (onStatus [this status]
-      (update-timeline-cache (status2tweetmap status))
-      (print-screen-timeline-cache))
+      (update-TimelineCache (rawdata->Tweet status))
+      (print-TimelineCache))
     (onDeletionNotice [this statusDeletionNotice] nil)
     (onTrackLimitationNotice [this numberOfLimitedStatuses] nil)
     (onScrubGeo [this userId upToStatusId] nil)
@@ -123,7 +105,8 @@
     (onUnblock [this source unblockedUser] nil)
     (onException [this ex] nil)))
 
-(defn start-twitterStream []
-  (let [twitterStream (make-twitterStream)]
-    (-> twitterStream (.addListener listener))
-    (-> twitterStream (.user))))
+(defn start-TwitterStream []
+  (let [TwitterStream (make-TwitterStream)]
+    (.. TwitterStream (addListener listener))
+    (.. TwitterStream user)))
+

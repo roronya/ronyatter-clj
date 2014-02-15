@@ -4,7 +4,12 @@
 
 (defn -main []
   (start-screen)
-  (make-timeline-cache)
-  (start-twitterStream)
-)
+  (make-TimelineCache)
+  (print-TimelineCache)
+  (start-TwitterStream)
+;  (println-screen (str (get-size-screen)))
+;  (input-until-enter)
+;  (clear-screen)
+;  (input-until-enter)
+ )
 

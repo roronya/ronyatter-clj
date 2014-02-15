@@ -9,8 +9,7 @@
                  [org.twitter4j/twitter4j-core "[3.0,)"]
                  [org.twitter4j/twitter4j-stream "[3.0,)"]
                  [org.twitter4j/twitter4j-async "[3.0,)"]
-                 [clojure-lanterna "0.9.4"]
-                 [com.googlecode.lanterna/lanterna "2.1.7"]]
-  ;;  :main ronyatter-clj.core
-  :main ronyatter-clj.lanterna
+                 [org.clojars.folcon/clojure-lanterna "0.9.5"]]
+    :main ronyatter-clj.core
+;  :main ronyatter-clj.lanterna
 )
