@@ -5,10 +5,10 @@
   (:import [java.util Deque LinkedList Collections])
   (:use [ronyatter-clj.lanterna]))
 
-(def consumerKey "kI2ijJO8ODuWZ819Zrk7Q")
-(def consumerSecret "IQ70vDqXVIthJmV70ieb1RNMdpP0YpYj191HgHZjKyM")
-(def accessToken "107718872-9Jiv5HhdrOeh3NtAP3Dt1vMVErKe5MWTmVaXRlmZ")
-(def accessTokenSecret "jECQWJ0Palrnxd9egf27ywSPgiagE46xMIH9MR9up7xlP")
+(def consumerKey "")
+(def consumerSecret "")
+(def accessToken "")
+(def accessTokenSecret "")
 
 (defn make-ConfigurationBuilder []
   (-> (new ConfigurationBuilder)
